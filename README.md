@@ -12,6 +12,12 @@ or
 yarn install (if using yarn)
 ```
 
+### init db
+
+```
+docker-compose up -d
+```
+
 #### Start Dev server
 
 ```
