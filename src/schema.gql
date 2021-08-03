@@ -1,0 +1,164 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Project {
+  id: Float!
+  createdAt: DateTime
+  updatedAt: DateTime
+  name: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type User {
+  id: Float!
+  createdAt: DateTime
+  updatedAt: DateTime
+  email: String!
+  password: String!
+  role: UserRole!
+}
+
+enum UserRole {
+  Owner
+  Admin
+  Translator
+}
+
+type Translation {
+  id: Float!
+  createdAt: DateTime
+  updatedAt: DateTime
+  keyName: String!
+  task: Task!
+}
+
+type Task {
+  id: Float!
+  createdAt: DateTime
+  updatedAt: DateTime
+  name: String!
+  savedOn: DateTime!
+  isComplete: Boolean!
+  translationItems: [Translation!]!
+  assignees: [Assignee!]!
+}
+
+type Assignee {
+  id: Float!
+  createdAt: DateTime
+  updatedAt: DateTime
+  user: User!
+  assignedLanguage: String!
+  task: Task!
+}
+
+type GetAllTranslationResponse {
+  key: String!
+  en: String!
+  fr: String!
+  zh: String!
+  ar: String!
+  pt: String!
+  es: String!
+  ko: String!
+}
+
+type CreateNewTaskResponse {
+  error: String
+  ok: Boolean!
+}
+
+type TranslationTaskResponse {
+  languageId: Int!
+  keyName: String!
+  assignedLanguageName: String!
+  assignedLanguageValue: String!
+  en: String!
+}
+
+type UpdateTranslationLanguageResponse {
+  error: String
+  ok: Boolean!
+}
+
+type LoginUserResponse {
+  error: String
+  ok: Boolean!
+  token: String
+}
+
+type CreateUserResponse {
+  error: String
+  ok: Boolean!
+}
+
+type Query {
+  getProjects: [Project!]
+  findProjectById(id: Float!): Project
+  getAllTranslations: [GetAllTranslationResponse!]
+  getTasks: [Task!]
+  getMyTaskLanguage(taskId: Float!): String
+  getTranslationLanguage(input: GetTranslationLanguageInput!): [TranslationTaskResponse!]
+  getUsers: [User!]!
+  me: User!
+}
+
+input GetTranslationLanguageInput {
+  taskId: Int!
+  myTaskLanguage: String
+}
+
+type Mutation {
+  createTask(createTaskDto: CreateTaskInput!): Int
+  createNewTask(createNewTaskDto: CreateNewTaskInput!): CreateNewTaskResponse!
+  updateTranslationLanguage(updateTranslationLanguageInput: UpdateTranslationLanguageInput!): UpdateTranslationLanguageResponse!
+  createUser(newUser: CreateUserDto!): CreateUserResponse!
+  loginUser(loginUser: LoginUserDto!): LoginUserResponse!
+}
+
+input CreateTaskInput {
+  name: String!
+}
+
+input CreateNewTaskInput {
+  taskName: String!
+  translationItems: [TranslationKey!]!
+  assignees: [Assignees!]!
+}
+
+input TranslationKey {
+  keyName: String!
+  keyValue: String!
+}
+
+input Assignees {
+  language: String!
+  email: String!
+}
+
+input UpdateTranslationLanguageInput {
+  id: Float
+  en: String
+  fr: String
+  zh: String
+  pt: String
+  es: String
+  ar: String
+  ko: String
+}
+
+input CreateUserDto {
+  email: String!
+  password: String!
+  role: UserRole!
+}
+
+input LoginUserDto {
+  email: String!
+  password: String!
+}
