@@ -162,3 +162,7 @@ input LoginUserDto {
   email: String!
   password: String!
 }
+
+type Subscription {
+  taskCreated: Task
+}

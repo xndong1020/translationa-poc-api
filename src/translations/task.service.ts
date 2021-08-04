@@ -13,7 +13,7 @@ import { Language } from './entities/language.entity';
 import { Task } from './entities/task.entity';
 import { Translation } from './entities/translation.entity';
 
-export type QueryResult = [boolean, string?];
+export type QueryResult = [boolean, string?, any?];
 
 @Injectable()
 export class TaskService {
@@ -205,11 +205,11 @@ export class TaskService {
         await queryRunner.manager.save<Assignee>(newAssignee);
       }
       await queryRunner.commitTransaction();
-      return [true];
+      return [true, null, newTaskInDb];
     } catch (e) {
       console.log('error', e);
       await queryRunner.rollbackTransaction();
-      return [false, e.message];
+      return [false, e.message, null];
     } finally {
       // you need to release a queryRunner which was manually instantiated
       await queryRunner.release();

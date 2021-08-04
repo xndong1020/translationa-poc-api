@@ -24,13 +24,16 @@ import { AuthModule } from './auth/auth.module';
 import { User } from './users/entities/user.entity';
 import { Assignee } from './translations/entities/assignee.entity';
 import { Language } from './translations/entities/language.entity';
+import { PubSubModule } from './pub-sub/pub-sub.module';
 
 @Module({
   imports: [
     GraphQLModule.forRoot({
+      debug: false,
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+      installSubscriptionHandlers: true,
       context: ({ req }) => ({
-        user: req['user'],
+        user: req ? req['user'] : {},
       }),
     }),
     ConfigModule.forRoot({
@@ -41,6 +44,8 @@ import { Language } from './translations/entities/language.entity';
         NODE_ENV: joi.string().valid('dev', 'prod', 'test'),
         DB_HOST: joi.string().required(),
         DB_PORT: joi.string().required(),
+        REDIS_HOST: joi.string().required(),
+        REDIS_PORT: joi.string().required(),
         DB_USERNAME: joi.string().required(),
         DB_PASSWORD: joi.string().required(),
         DB_NAME: joi.string().required(),
@@ -65,6 +70,7 @@ import { Language } from './translations/entities/language.entity';
     CommonModule,
     UsersModule,
     AuthModule,
+    PubSubModule,
   ],
   controllers: [],
   providers: [],

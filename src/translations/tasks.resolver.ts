@@ -1,4 +1,12 @@
-import { Resolver, Query, Args, Int, Mutation, Context } from '@nestjs/graphql';
+import {
+  Resolver,
+  Query,
+  Args,
+  Int,
+  Mutation,
+  Context,
+  Subscription,
+} from '@nestjs/graphql';
 import { Project } from './entities/project.entity';
 import { ProjectService } from './project.service';
 import { ConfigService } from '@nestjs/config';
@@ -7,7 +15,7 @@ import { Task } from './entities/task.entity';
 import { CreateTaskInput } from './dtos/CreateTaskInput.dto';
 import { CreateNewTaskInput } from './dtos/CreateNewTaskInput.dto';
 import { CreateNewTaskResponse } from './dtos/CreateNewTaskResponse';
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { User } from 'src/users/entities/user.entity';
 import { UserRole } from 'src/common/enums/USER_ROLE.enum';
@@ -15,12 +23,17 @@ import { TranslationTaskResponse } from './dtos/TranslationTaskResponse';
 import { UpdateTranslationLanguageInput } from './dtos/updateTranslationLanguageInput.dto';
 import { UpdateTranslationLanguageResponse } from './dtos/UpdateTranslationLanguageResponse';
 import { GetTranslationLanguageInput } from './dtos/GetTranslationLanguageInput.dto';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
+import { PUB_SUB } from 'src/pub-sub/pub-sub.module';
+
+const TASK_CREATED_EVENT = 'taskCreated';
 
 @Resolver()
 export class TasksResolver {
   constructor(
     private readonly taskService: TaskService,
     private readonly configService: ConfigService,
+    @Inject(PUB_SUB) private pubSub: RedisPubSub,
   ) {}
 
   @Query(() => [Task], { nullable: true })
@@ -66,7 +79,12 @@ export class TasksResolver {
   async createNewTask(
     @Args('createNewTaskDto') createNewTaskDto: CreateNewTaskInput,
   ): Promise<CreateNewTaskResponse> {
-    const [ok, error] = await this.taskService.createNewTask(createNewTaskDto);
+    const [ok, error, newTaskCreated] = await this.taskService.createNewTask(
+      createNewTaskDto,
+    );
+    if (ok && newTaskCreated) {
+      this.pubSub.publish(TASK_CREATED_EVENT, { taskCreated: newTaskCreated });
+    }
     return { ok, error };
   }
 
@@ -79,5 +97,10 @@ export class TasksResolver {
       updateTranslationLanguageInput,
     );
     return { ok, error };
+  }
+
+  @Subscription(() => Task, { nullable: true })
+  taskCreated() {
+    return this.pubSub.asyncIterator(TASK_CREATED_EVENT);
   }
 }
