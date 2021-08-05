@@ -1,6 +1,12 @@
-import { Field, InputType, ObjectType } from '@nestjs/graphql';
+import { Field, InputType, Int, ObjectType } from '@nestjs/graphql';
 import { CoreEntity } from 'src/common/entities/core.entity';
-import { Column, Entity, OneToMany, UpdateDateColumn } from 'typeorm';
+import {
+  AfterLoad,
+  Column,
+  Entity,
+  OneToMany,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Assignee } from './assignee.entity';
 import { Translation } from './translation.entity';
 
@@ -12,17 +18,17 @@ export class Task extends CoreEntity {
   @Field()
   name: string;
 
-  // @Column({ name: 'assignee_email' })
-  // @Field()
-  // assigneeEmail: string;
-
   @UpdateDateColumn({ name: 'saved_on', nullable: true })
   @Field()
   savedOn: Date;
 
-  @Column({ name: 'is_complete' })
+  @Column({ name: 'is_locked' })
   @Field((type) => Boolean)
-  isComplete: boolean;
+  isLocked: boolean;
+
+  @Column({ name: 'updated_by', nullable: true })
+  @Field({ nullable: true })
+  updatedBy?: string;
 
   @OneToMany(() => Translation, (translation) => translation.task)
   @Field((type) => [Translation])
@@ -31,4 +37,26 @@ export class Task extends CoreEntity {
   @OneToMany(() => Assignee, (assignee) => assignee.task)
   @Field(() => [Assignee])
   assignees: Assignee[];
+
+  @Field(() => Boolean, { nullable: true })
+  hasCompleted?: boolean;
+
+  @Field(() => Int, { nullable: true })
+  totalKeysCount?: number;
+
+  @Field(() => Int, { nullable: true })
+  pendingKeysCount?: number;
+
+  @AfterLoad()
+  checkTaskComplete() {
+    this.hasCompleted = this.translationItems?.every(
+      (item) => item.hasComplete,
+    );
+
+    this.totalKeysCount = this.translationItems?.length;
+
+    this.pendingKeysCount = this.translationItems?.filter(
+      (item) => !item.hasComplete,
+    ).length;
+  }
 }

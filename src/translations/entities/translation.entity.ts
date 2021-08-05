@@ -1,6 +1,7 @@
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { CoreEntity } from 'src/common/entities/core.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { AfterLoad, Column, Entity, ManyToOne, OneToOne } from 'typeorm';
+import { Language } from './language.entity';
 import { Task } from './task.entity';
 
 @InputType({ isAbstract: true })
@@ -14,4 +15,15 @@ export class Translation extends CoreEntity {
   @ManyToOne(() => Task, (task) => task.translationItems)
   @Field(() => Task)
   task: Task;
+
+  @OneToOne(() => Language, (language) => language.translation)
+  language: Language;
+
+  @Field(() => Boolean, { nullable: true })
+  hasComplete?: boolean;
+
+  @AfterLoad()
+  checkComplete() {
+    this.hasComplete = this.language?.hasComplete;
+  }
 }

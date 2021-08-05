@@ -35,6 +35,7 @@ type Translation {
   updatedAt: DateTime
   keyName: String!
   task: Task!
+  hasComplete: Boolean
 }
 
 type Task {
@@ -43,9 +44,13 @@ type Task {
   updatedAt: DateTime
   name: String!
   savedOn: DateTime!
-  isComplete: Boolean!
+  isLocked: Boolean!
+  updatedBy: String
   translationItems: [Translation!]!
   assignees: [Assignee!]!
+  hasCompleted: Boolean
+  totalKeysCount: Int
+  pendingKeysCount: Int
 }
 
 type Assignee {
@@ -86,6 +91,11 @@ type UpdateTranslationLanguageResponse {
   ok: Boolean!
 }
 
+type LockTaskResponse {
+  error: String
+  ok: Boolean!
+}
+
 type LoginUserResponse {
   error: String
   ok: Boolean!
@@ -95,6 +105,11 @@ type LoginUserResponse {
 type CreateUserResponse {
   error: String
   ok: Boolean!
+}
+
+type ServerMessage {
+  functionName: String!
+  payload: String!
 }
 
 type Query {
@@ -117,6 +132,7 @@ type Mutation {
   createTask(createTaskDto: CreateTaskInput!): Int
   createNewTask(createNewTaskDto: CreateNewTaskInput!): CreateNewTaskResponse!
   updateTranslationLanguage(updateTranslationLanguageInput: UpdateTranslationLanguageInput!): UpdateTranslationLanguageResponse!
+  lockTask(taskId: Float!): LockTaskResponse!
   createUser(newUser: CreateUserDto!): CreateUserResponse!
   loginUser(loginUser: LoginUserDto!): LoginUserResponse!
 }
@@ -150,6 +166,7 @@ input UpdateTranslationLanguageInput {
   es: String
   ar: String
   ko: String
+  hasComplete: Boolean
 }
 
 input CreateUserDto {
@@ -164,5 +181,5 @@ input LoginUserDto {
 }
 
 type Subscription {
-  taskCreated: Task
+  messageFeed: ServerMessage
 }

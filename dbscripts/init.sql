@@ -26,7 +26,8 @@ CREATE TABLE public.tasks (
 	"updatedAt" timestamp NOT NULL DEFAULT now(),
 	"name" varchar NOT NULL,
 	saved_on timestamp NULL DEFAULT now(),
-	is_complete bool NOT NULL,
+	is_locked bool NOT NULL,
+	updated_by varchar NOT NULL,
 	CONSTRAINT "PK_tbl_tasks" PRIMARY KEY (id)
 );
 

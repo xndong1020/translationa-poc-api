@@ -25,6 +25,7 @@ import { User } from './users/entities/user.entity';
 import { Assignee } from './translations/entities/assignee.entity';
 import { Language } from './translations/entities/language.entity';
 import { PubSubModule } from './pub-sub/pub-sub.module';
+import { SubscriptionModule } from './subscription/subscription.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { PubSubModule } from './pub-sub/pub-sub.module';
     UsersModule,
     AuthModule,
     PubSubModule,
+    SubscriptionModule,
   ],
   controllers: [],
   providers: [],

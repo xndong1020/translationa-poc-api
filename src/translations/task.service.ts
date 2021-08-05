@@ -33,11 +33,12 @@ export class TaskService {
   ) {}
 
   async getAll() {
-    return await this.taskRepository.find({
-      order: {
-        id: 'ASC',
-      },
-    });
+    return await this.taskRepository
+      .createQueryBuilder('t')
+      .leftJoinAndSelect('t.translationItems', 'tt')
+      .leftJoinAndSelect('tt.language', 'ttl')
+      .orderBy('t.id', 'ASC')
+      .getMany();
   }
 
   async getMyTaskLanguage(taskId: number, user: User) {
@@ -65,6 +66,8 @@ export class TaskService {
     );
     const allMyTasks = await this.taskRepository
       .createQueryBuilder('t')
+      .leftJoinAndSelect('t.translationItems', 'tt')
+      .leftJoinAndSelect('tt.language', 'ttl')
       .where('t.id IN (:...ids)', {
         ids,
       })
@@ -173,7 +176,7 @@ export class TaskService {
     try {
       const task = new Task();
       task.name = newTask.taskName;
-      task.isComplete = false;
+      task.isLocked = false;
 
       const newTaskInDb = await queryRunner.manager.save<Task>(task);
 
@@ -213,6 +216,20 @@ export class TaskService {
     } finally {
       // you need to release a queryRunner which was manually instantiated
       await queryRunner.release();
+    }
+  }
+
+  async lockTask(id: number, user: string): Promise<QueryResult> {
+    try {
+      const taskInDb = await this.taskRepository.findOneOrFail({
+        id,
+      });
+      taskInDb.isLocked = true;
+      taskInDb.updatedBy = user;
+      await this.taskRepository.save(taskInDb);
+      return [true];
+    } catch (e) {
+      return [false, e.message];
     }
   }
 }

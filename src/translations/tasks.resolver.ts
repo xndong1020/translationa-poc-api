@@ -25,8 +25,8 @@ import { UpdateTranslationLanguageResponse } from './dtos/UpdateTranslationLangu
 import { GetTranslationLanguageInput } from './dtos/GetTranslationLanguageInput.dto';
 import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { PUB_SUB } from 'src/pub-sub/pub-sub.module';
-
-const TASK_CREATED_EVENT = 'taskCreated';
+import { SERVER_EVENT } from 'src/common/constants/constants';
+import { LockTaskResponse } from './dtos/LockTaskResponse';
 
 @Resolver()
 export class TasksResolver {
@@ -83,7 +83,12 @@ export class TasksResolver {
       createNewTaskDto,
     );
     if (ok && newTaskCreated) {
-      this.pubSub.publish(TASK_CREATED_EVENT, { taskCreated: newTaskCreated });
+      this.pubSub.publish(SERVER_EVENT, {
+        messageFeed: {
+          functionName: 'createNewTask',
+          payload: JSON.stringify(newTaskCreated),
+        },
+      });
     }
     return { ok, error };
   }
@@ -99,8 +104,25 @@ export class TasksResolver {
     return { ok, error };
   }
 
-  @Subscription(() => Task, { nullable: true })
-  taskCreated() {
-    return this.pubSub.asyncIterator(TASK_CREATED_EVENT);
+  @Mutation(() => LockTaskResponse)
+  async lockTask(
+    @Args('taskId') taskId: number,
+    @Context() context: any,
+  ): Promise<LockTaskResponse> {
+    const user: User = context.user;
+    if (user.role !== UserRole.Translator) {
+      const [ok, error] = await this.taskService.lockTask(taskId, user.email);
+
+      if (ok) {
+        this.pubSub.publish(SERVER_EVENT, {
+          messageFeed: {
+            functionName: 'lockTask',
+            payload: JSON.stringify({ taskId }),
+          },
+        });
+      }
+
+      return { ok, error };
+    }
   }
 }
