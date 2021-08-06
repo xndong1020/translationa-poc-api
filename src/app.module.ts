@@ -26,6 +26,8 @@ import { Assignee } from './translations/entities/assignee.entity';
 import { Language } from './translations/entities/language.entity';
 import { PubSubModule } from './pub-sub/pub-sub.module';
 import { SubscriptionModule } from './subscription/subscription.module';
+import { SearchModule } from './search/search.module';
+import { TranslationSearchModule } from './translation-search/translation-search.module';
 
 @Module({
   imports: [
@@ -73,6 +75,8 @@ import { SubscriptionModule } from './subscription/subscription.module';
     AuthModule,
     PubSubModule,
     SubscriptionModule,
+    SearchModule,
+    TranslationSearchModule,
   ],
   controllers: [],
   providers: [],

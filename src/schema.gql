@@ -96,6 +96,22 @@ type LockTaskResponse {
   ok: Boolean!
 }
 
+type TranslationResponse {
+  en: String!
+  fr: String!
+  zh: String!
+  es: String!
+  pt: String!
+  ko: String!
+  ar: String!
+}
+
+type TranslationSearchResponse {
+  keyName: String!
+  description: String!
+  translation: TranslationResponse!
+}
+
 type LoginUserResponse {
   error: String
   ok: Boolean!
@@ -119,6 +135,7 @@ type Query {
   getTasks: [Task!]
   getMyTaskLanguage(taskId: Float!): String
   getTranslationLanguage(input: GetTranslationLanguageInput!): [TranslationTaskResponse!]
+  search(queryText: String!): [TranslationSearchResponse!]
   getUsers: [User!]!
   me: User!
 }

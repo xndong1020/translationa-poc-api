@@ -10,9 +10,12 @@ import { TasksResolver } from './tasks.resolver';
 import { User } from 'src/users/entities/user.entity';
 import { Language } from './entities/language.entity';
 import { Assignee } from './entities/assignee.entity';
+import { TranslationSearchService } from 'src/translation-search/translation-search.service';
+import { TranslationSearchModule } from 'src/translation-search/translation-search.module';
 
 @Module({
   imports: [
+    TranslationSearchModule,
     TypeOrmModule.forFeature([
       Project,
       Translation,
@@ -22,6 +25,12 @@ import { Assignee } from './entities/assignee.entity';
       Assignee,
     ]),
   ],
-  providers: [TranslationsResolver, TasksResolver, ProjectService, TaskService],
+  providers: [
+    TranslationsResolver,
+    TasksResolver,
+    ProjectService,
+    TaskService,
+    TranslationSearchService,
+  ],
 })
 export class TranslationsModule {}

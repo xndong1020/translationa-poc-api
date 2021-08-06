@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import uniq from 'lodash/uniq';
 import { User } from 'src/users/entities/user.entity';
@@ -12,6 +12,10 @@ import { Assignee } from './entities/assignee.entity';
 import { Language } from './entities/language.entity';
 import { Task } from './entities/task.entity';
 import { Translation } from './entities/translation.entity';
+import {
+  ITranslateProps,
+  TranslationSearchService,
+} from 'src/translation-search/translation-search.service';
 
 export type QueryResult = [boolean, string?, any?];
 
@@ -28,7 +32,7 @@ export class TaskService {
     private readonly assigneeRepository: Repository<Assignee>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-
+    private translationSearchService: TranslationSearchService,
     private readonly connection: Connection,
   ) {}
 
@@ -221,12 +225,44 @@ export class TaskService {
 
   async lockTask(id: number, user: string): Promise<QueryResult> {
     try {
-      const taskInDb = await this.taskRepository.findOneOrFail({
-        id,
+      const task = await this.taskRepository
+        .createQueryBuilder('t')
+        .leftJoinAndSelect('t.translationItems', 'tt')
+        .leftJoinAndSelect('tt.language', 'ttl')
+        .where('t.id = :taskId', {
+          taskId: id,
+        })
+        .orderBy('t.id')
+        .getOne();
+
+      const data: ITranslateProps[] = task.translationItems.map((item) => {
+        return {
+          keyName: item.keyName,
+          description: item.language.en,
+          translation: {
+            en: item.language.en,
+            fr: item.language.fr,
+            zh: item.language.zh,
+            es: item.language.es,
+            pt: item.language.pt,
+            ko: item.language.ko,
+            ar: item.language.ar,
+          },
+        };
       });
-      taskInDb.isLocked = true;
-      taskInDb.updatedBy = user;
-      await this.taskRepository.save(taskInDb);
+
+      const { statusCode } =
+        await this.translationSearchService.indexRecordsBulk(data);
+
+      if (statusCode === 200) {
+        const taskInDb = await this.taskRepository.findOneOrFail({
+          id,
+        });
+        taskInDb.isLocked = true;
+        taskInDb.updatedBy = user;
+        await this.taskRepository.save(taskInDb);
+      }
+
       return [true];
     } catch (e) {
       return [false, e.message];
