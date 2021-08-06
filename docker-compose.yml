@@ -89,8 +89,6 @@ services:
     environment:
       ELASTICSEARCH_URL: http://es01:9200
       ELASTICSEARCH_HOSTS: '["http://es01:9200","http://es02:9200","http://es03:9200"]'
-      ELASTICSEARCH_USERNAME: root
-      ELASTICSEARCH_PASSWORD: root
     networks:
       - app-network
 
