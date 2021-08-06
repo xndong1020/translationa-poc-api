@@ -18,6 +18,8 @@ import {
 } from 'src/translation-search/translation-search.service';
 import { SUPPORTED_LANGUAGES } from 'src/common/constants/constants';
 import { AutoTranslateService } from 'src/auto-translate/auto-translate.service';
+import { KafkaService } from 'src/kafka/kafka.service';
+import { KafkaPayload } from 'src/kafka/kafka.config';
 
 export type QueryResult = [boolean, string?, any?];
 
@@ -36,6 +38,7 @@ export class TaskService {
     private readonly userRepository: Repository<User>,
     private translationSearchService: TranslationSearchService,
     private autoTranslateService: AutoTranslateService,
+    private readonly kafkaService: KafkaService,
     private readonly connection: Connection,
   ) {}
 
@@ -188,6 +191,20 @@ export class TaskService {
       task.updatedBy = user.email || '';
 
       const newTaskInDb = await queryRunner.manager.save<Task>(task);
+
+      const payload: KafkaPayload = {
+        messageId: '' + new Date().valueOf(),
+        body: {
+          value: `New translation task ${newTaskInDb.id} has been created`,
+        },
+        messageType: 'Translation.Created',
+        topicName: 'translation.creation.topic',
+      };
+      const value = await this.kafkaService.sendMessage(
+        'translation.creation.topic',
+        payload,
+      );
+      console.log('kafka status ', value);
 
       for await (const translationKey of newTask.translationItems) {
         const translation = new Translation();

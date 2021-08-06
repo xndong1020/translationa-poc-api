@@ -29,6 +29,7 @@ import { SubscriptionModule } from './subscription/subscription.module';
 import { SearchModule } from './search/search.module';
 import { TranslationSearchModule } from './translation-search/translation-search.module';
 import { AutoTranslateModule } from './auto-translate/auto-translate.module';
+import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
@@ -73,6 +74,11 @@ import { AutoTranslateModule } from './auto-translate/auto-translate.module';
     JwtModule.forRoot({
       isGlobal: true,
       secretKey: process.env.SECRET_KEY,
+    }),
+    KafkaModule.register({
+      clientId: 'test-app-client',
+      brokers: ['localhost:9092'],
+      groupId: 'test-app-group',
     }),
     TranslationsModule,
     CommonModule,
