@@ -16,6 +16,8 @@ import {
   ITranslateProps,
   TranslationSearchService,
 } from 'src/translation-search/translation-search.service';
+import { SUPPORTED_LANGUAGES } from 'src/common/constants/constants';
+import { AutoTranslateService } from 'src/auto-translate/auto-translate.service';
 
 export type QueryResult = [boolean, string?, any?];
 
@@ -33,6 +35,7 @@ export class TaskService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private translationSearchService: TranslationSearchService,
+    private autoTranslateService: AutoTranslateService,
     private readonly connection: Connection,
   ) {}
 
@@ -174,8 +177,6 @@ export class TaskService {
     newTask: CreateNewTaskInput,
     user: User,
   ): Promise<QueryResult> {
-    const allLanguages = ['fr', 'zh', 'pt', 'es', 'ar', 'ko'];
-
     const queryRunner = this.connection.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -198,8 +199,12 @@ export class TaskService {
         language.en = translationKey.keyValue;
         language.translation = translation;
 
-        for (const lan of allLanguages) {
-          language[lan] = '';
+        const autoTranslations =
+          await this.autoTranslateService.translateTextBulk(
+            translationKey.keyValue,
+          );
+        for (const lan of SUPPORTED_LANGUAGES) {
+          language[lan] = autoTranslations[lan] || '';
         }
 
         await queryRunner.manager.save<Language>(language);

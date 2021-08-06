@@ -28,6 +28,7 @@ import { PubSubModule } from './pub-sub/pub-sub.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { SearchModule } from './search/search.module';
 import { TranslationSearchModule } from './translation-search/translation-search.module';
+import { AutoTranslateModule } from './auto-translate/auto-translate.module';
 
 @Module({
   imports: [
@@ -52,6 +53,10 @@ import { TranslationSearchModule } from './translation-search/translation-search
         DB_USERNAME: joi.string().required(),
         DB_PASSWORD: joi.string().required(),
         DB_NAME: joi.string().required(),
+        ELASTICSEARCH_NODE: joi.string().required(),
+        ELASTICSEARCH_USERNAME: joi.string().required(),
+        ELASTICSEARCH_PASSWORD: joi.string().required(),
+        GOOGLE_APPLICATION_CREDENTIALS: joi.string().required(),
       }),
     }),
     TypeOrmModule.forRoot({
@@ -77,6 +82,7 @@ import { TranslationSearchModule } from './translation-search/translation-search
     SubscriptionModule,
     SearchModule,
     TranslationSearchModule,
+    AutoTranslateModule,
   ],
   controllers: [],
   providers: [],

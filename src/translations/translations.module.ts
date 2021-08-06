@@ -12,10 +12,13 @@ import { Language } from './entities/language.entity';
 import { Assignee } from './entities/assignee.entity';
 import { TranslationSearchService } from 'src/translation-search/translation-search.service';
 import { TranslationSearchModule } from 'src/translation-search/translation-search.module';
+import { AutoTranslateService } from 'src/auto-translate/auto-translate.service';
+import { AutoTranslateModule } from 'src/auto-translate/auto-translate.module';
 
 @Module({
   imports: [
     TranslationSearchModule,
+    AutoTranslateModule,
     TypeOrmModule.forFeature([
       Project,
       Translation,
@@ -31,6 +34,7 @@ import { TranslationSearchModule } from 'src/translation-search/translation-sear
     ProjectService,
     TaskService,
     TranslationSearchService,
+    AutoTranslateService,
   ],
 })
 export class TranslationsModule {}
