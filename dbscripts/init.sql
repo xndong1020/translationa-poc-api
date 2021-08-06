@@ -10,7 +10,7 @@ CREATE TABLE public.users (
 	CONSTRAINT "PK_tbl_users" PRIMARY KEY (id)
 );
 
-INSERT INTO public.users ("createdAt","updatedAt",email,"password","role") VALUES 
+INSERT INTO public.users ("createdAt","updatedAt",email,"password","role") VALUES
 ('2021-08-03 07:39:10.208','2021-08-03 07:39:10.208','admin01@test.com','$2b$10$o3teqwo97HkfqXoj5Dh9iOST53iUaZIG6jc7KD3jyjeZW1u.6Ve7q','owner')
 ,('2021-08-03 07:39:26.811','2021-08-03 07:39:26.811','translator01@test.com','$2b$10$eXxZ0gCRXnnTSkxbGdXbqO/6Rz3s/rvBytDMAt7JhEbMOP9RWTf22','translator')
 ,('2021-08-03 07:39:29.958','2021-08-03 07:39:29.958','translator02@test.com','$2b$10$.2LkoMIKvZxJn/h4C7U/leYEpUGEWxa54R69JFIVrRB/tHJbNfFfS','translator')
@@ -27,7 +27,7 @@ CREATE TABLE public.tasks (
 	"name" varchar NOT NULL,
 	saved_on timestamp NULL DEFAULT now(),
 	is_locked bool NOT NULL,
-	updated_by varchar NOT NULL,
+	updated_by varchar,
 	CONSTRAINT "PK_tbl_tasks" PRIMARY KEY (id)
 );
 

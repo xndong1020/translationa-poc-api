@@ -170,7 +170,10 @@ export class TaskService {
     return newTaskId.id;
   }
 
-  async createNewTask(newTask: CreateNewTaskInput): Promise<QueryResult> {
+  async createNewTask(
+    newTask: CreateNewTaskInput,
+    user: User,
+  ): Promise<QueryResult> {
     const allLanguages = ['fr', 'zh', 'pt', 'es', 'ar', 'ko'];
 
     const queryRunner = this.connection.createQueryRunner();
@@ -181,6 +184,7 @@ export class TaskService {
       const task = new Task();
       task.name = newTask.taskName;
       task.isLocked = false;
+      task.updatedBy = user.email || '';
 
       const newTaskInDb = await queryRunner.manager.save<Task>(task);
 
@@ -259,7 +263,7 @@ export class TaskService {
           id,
         });
         taskInDb.isLocked = true;
-        taskInDb.updatedBy = user;
+        taskInDb.updatedBy = user || 'user';
         await this.taskRepository.save(taskInDb);
       }
 

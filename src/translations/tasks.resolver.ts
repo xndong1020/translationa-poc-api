@@ -78,9 +78,12 @@ export class TasksResolver {
   @Mutation(() => CreateNewTaskResponse)
   async createNewTask(
     @Args('createNewTaskDto') createNewTaskDto: CreateNewTaskInput,
+    @Context() context: any,
   ): Promise<CreateNewTaskResponse> {
+    const user: User = context.user;
     const [ok, error, newTaskCreated] = await this.taskService.createNewTask(
       createNewTaskDto,
+      user,
     );
     if (ok && newTaskCreated) {
       this.pubSub.publish(SERVER_EVENT, {
