@@ -10,6 +10,12 @@ export class JwtMiddleware implements NestMiddleware {
     private readonly usersService: UsersService,
   ) {}
   async use(req: Request, res: Response, next: () => void) {
+    if (req.body.query.includes('loginUser')) {
+      console.log('loginUser from cli');
+      next();
+      return;
+    }
+
     // IntrospectionQuery is from Graphql playground auto schema polling
     if (req.body.operationName === 'IntrospectionQuery') {
       next();
