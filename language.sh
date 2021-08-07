@@ -2,6 +2,20 @@
 
 curl -L -o /usr/bin/jq.exe https://github.com/stedolan/jq/releases/latest/download/jq-win64.exe
 
+if [[ -z "${DEPLOY_LOGIN_EMAIL}" ]]; then
+  LOGIN_EMAIL="admin01@test.com"
+else
+  LOGIN_EMAIL="${DEPLOY_LOGIN_EMAIL}"
+fi
+
+if [[ -z "${DEPLOY_LOGIN_PASSWORD}" ]]; then
+  LOGIN_PASSWORD="123456"
+else
+  LOGIN_PASSWORD="${DEPLOY_LOGIN_PASSWORD}"
+fi
+
+# echo "$LOGIN_EMAIL" "$LOGIN_PASSWORD"
+
 TOKEN=$(
   curl 'http://localhost:3001/graphql' \
   -H 'Content-Type: application/json' \
@@ -9,14 +23,26 @@ TOKEN=$(
     "query": "mutation($loginUser: LoginUserDto!) { loginUser(loginUser: $loginUser) { token } }",
     "variables": {
       "loginUser": {
-        "email": "admin01@test.com",
-        "password": "123456"
+        "email": "'"$LOGIN_EMAIL"'",
+        "password": "'"$LOGIN_PASSWORD"'"
       }
     }
   }' | tac | jq -r '.data.loginUser.token'
 )
 
-echo "$TOKEN"
+# echo "$TOKEN"
+
+# check if $TOKEN is 'null'
+[ $TOKEN = 'null' ] && exit 1 
+
+# check if $TOKEN is unset
+if [ -z ${TOKEN+x} ]; 
+  then 
+    echo "TOKEN is unset"; 
+    exit 1; 
+  else 
+    echo "TOKEN is set to '$TOKEN'";  
+fi
  
 curl \
 -X POST \
