@@ -31,6 +31,12 @@ import { TranslationSearchModule } from './translation-search/translation-search
 import { AutoTranslateModule } from './auto-translate/auto-translate.module';
 import { KafkaModule } from './kafka/kafka.module';
 
+import { SentryModule } from '@ntegral/nestjs-sentry';
+import { LogLevel } from '@sentry/types';
+
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { GraphqlInterceptor } from '@ntegral/nestjs-sentry';
+
 @Module({
   imports: [
     GraphQLModule.forRoot({
@@ -57,6 +63,7 @@ import { KafkaModule } from './kafka/kafka.module';
         ELASTICSEARCH_NODE: joi.string().required(),
         ELASTICSEARCH_USERNAME: joi.string().required(),
         ELASTICSEARCH_PASSWORD: joi.string().required(),
+        SENTRY_DSN: joi.string().required(),
         GOOGLE_APPLICATION_CREDENTIALS: joi.string().required(),
       }),
     }),
@@ -80,6 +87,13 @@ import { KafkaModule } from './kafka/kafka.module';
       brokers: ['localhost:9092'],
       groupId: 'translation-api-group',
     }),
+    SentryModule.forRoot({
+      dsn: process.env.SENTRY_DSN,
+      debug: process.env.NODE_ENV !== 'production',
+      environment: process.env.NODE_ENV,
+      logLevel:
+        process.env.NODE_ENV !== 'production' ? LogLevel.Debug : LogLevel.Error,
+    }),
     TranslationsModule,
     CommonModule,
     UsersModule,
@@ -91,7 +105,7 @@ import { KafkaModule } from './kafka/kafka.module';
     AutoTranslateModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: GraphqlInterceptor }],
 })
 // export class AppModule {}
 export class AppModule implements NestModule {

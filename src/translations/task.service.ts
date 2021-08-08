@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectSentry, SentryService } from '@ntegral/nestjs-sentry';
 import uniq from 'lodash/uniq';
 import { User } from 'src/users/entities/user.entity';
 import { Connection, Repository } from 'typeorm';
@@ -41,115 +42,151 @@ export class TaskService {
     private autoTranslateService: AutoTranslateService,
     private readonly kafkaService: KafkaService,
     private readonly connection: Connection,
+    @InjectSentry() private readonly logger: SentryService,
   ) {}
 
   async getAll() {
-    return await this.taskRepository
-      .createQueryBuilder('t')
-      .leftJoinAndSelect('t.translationItems', 'tt')
-      .leftJoinAndSelect('tt.language', 'ttl')
-      .orderBy('t.id', 'ASC')
-      .getMany();
+    try {
+      return await this.taskRepository
+        .createQueryBuilder('t')
+        .leftJoinAndSelect('t.translationItems', 'tt')
+        .leftJoinAndSelect('tt.language', 'ttl')
+        .orderBy('t.id', 'ASC')
+        .getMany();
+    } catch (e) {
+      console.log('error', e);
+      // this.logger.instance().captureMessage(message, Sentry.Severity.Log);
+      this.logger.instance().captureException(e);
+      throw e;
+    }
   }
 
   async getMyTaskLanguage(taskId: number, user: User) {
-    const assignedToMe = await this.assigneeRepository
-      .createQueryBuilder('a')
-      .select(['a.assignedLanguage'])
-      .leftJoin('a.task', 't')
-      .leftJoin('a.user', 'u')
-      .addSelect('u.id')
-      .where('t.id = :taskId', { taskId })
-      .andWhere('u.id  = :userId', { userId: user.id })
-      .getOne();
+    try {
+      const assignedToMe = await this.assigneeRepository
+        .createQueryBuilder('a')
+        .select(['a.assignedLanguage'])
+        .leftJoin('a.task', 't')
+        .leftJoin('a.user', 'u')
+        .addSelect('u.id')
+        .where('t.id = :taskId', { taskId })
+        .andWhere('u.id  = :userId', { userId: user.id })
+        .getOne();
 
-    return assignedToMe.assignedLanguage;
+      return assignedToMe.assignedLanguage;
+    } catch (e) {
+      console.log('error', e);
+      // this.logger.instance().captureMessage(message, Sentry.Severity.Log);
+      this.logger.instance().captureException(e);
+      throw e;
+    }
   }
 
   async getMyTasks(user: User) {
-    const assignedToMe = await this.assigneeRepository.find({
-      where: { user },
-      relations: ['task'],
-    });
-    if (!assignedToMe.length) return [];
-    const ids: number[] = uniq(
-      assignedToMe.map((assignee) => assignee.task.id),
-    );
-    const allMyTasks = await this.taskRepository
-      .createQueryBuilder('t')
-      .leftJoinAndSelect('t.translationItems', 'tt')
-      .leftJoinAndSelect('tt.language', 'ttl')
-      .where('t.id IN (:...ids)', {
-        ids,
-      })
-      .orderBy('t.id')
-      .getMany();
-    return allMyTasks;
+    try {
+      const assignedToMe = await this.assigneeRepository.find({
+        where: { user },
+        relations: ['task'],
+      });
+      if (!assignedToMe.length) return [];
+      const ids: number[] = uniq(
+        assignedToMe.map((assignee) => assignee.task.id),
+      );
+      const allMyTasks = await this.taskRepository
+        .createQueryBuilder('t')
+        .leftJoinAndSelect('t.translationItems', 'tt')
+        .leftJoinAndSelect('tt.language', 'ttl')
+        .where('t.id IN (:...ids)', {
+          ids,
+        })
+        .orderBy('t.id')
+        .getMany();
+      return allMyTasks;
+    } catch (e) {
+      console.log('error', e);
+      // this.logger.instance().captureMessage(message, Sentry.Severity.Log);
+      this.logger.instance().captureException(e);
+      throw e;
+    }
   }
 
   async getTranslationTasks(
     input: GetTranslationLanguageInput,
     user: User,
   ): Promise<TranslationTaskResponse[]> {
-    const assignedLanguage = await this.assigneeRepository
-      .createQueryBuilder('a')
-      .select('a.assignedLanguage')
-      .leftJoin('a.task', 't')
-      .where('t.id = :taskId', { taskId: input.taskId })
-      .andWhere('a.userId = :userId', { userId: user.id })
-      .orderBy('a.id')
-      .getOne();
+    try {
+      const assignedLanguage = await this.assigneeRepository
+        .createQueryBuilder('a')
+        .select('a.assignedLanguage')
+        .leftJoin('a.task', 't')
+        .where('t.id = :taskId', { taskId: input.taskId })
+        .andWhere('a.userId = :userId', { userId: user.id })
+        .orderBy('a.id')
+        .getOne();
 
-    let baseQuery = this.languageRepository
-      .createQueryBuilder('l')
-      .leftJoinAndSelect('l.translation', 'tr');
+      let baseQuery = this.languageRepository
+        .createQueryBuilder('l')
+        .leftJoinAndSelect('l.translation', 'tr');
 
-    if (input.myTaskLanguage) {
-      baseQuery = baseQuery.addSelect(`l.${input.myTaskLanguage}`);
+      if (input.myTaskLanguage) {
+        baseQuery = baseQuery.addSelect(`l.${input.myTaskLanguage}`);
+      }
+
+      baseQuery = baseQuery
+        .leftJoinAndSelect('tr.task', 't')
+        .where('t.id = :taskId', { taskId: input.taskId })
+        .orderBy('l.id');
+
+      const languages = await baseQuery.getMany();
+
+      const results: TranslationTaskResponse[] = languages.map((l) => {
+        return {
+          languageId: l.id,
+          keyName: l.translation.keyName,
+          en: l.en,
+          assignedLanguageName: assignedLanguage.assignedLanguage,
+          assignedLanguageValue: l[input.myTaskLanguage],
+        };
+      });
+
+      return results;
+    } catch (e) {
+      console.log('error', e);
+      // this.logger.instance().captureMessage(message, Sentry.Severity.Log);
+      this.logger.instance().captureException(e);
+      throw e;
     }
-
-    baseQuery = baseQuery
-      .leftJoinAndSelect('tr.task', 't')
-      .where('t.id = :taskId', { taskId: input.taskId })
-      .orderBy('l.id');
-
-    const languages = await baseQuery.getMany();
-
-    const results: TranslationTaskResponse[] = languages.map((l) => {
-      return {
-        languageId: l.id,
-        keyName: l.translation.keyName,
-        en: l.en,
-        assignedLanguageName: assignedLanguage.assignedLanguage,
-        assignedLanguageValue: l[input.myTaskLanguage],
-      };
-    });
-
-    return results;
   }
 
   async getAllTranslation() {
-    const allTranslation = await this.languageRepository.find({
-      relations: ['translation'],
-      order: {
-        id: 'ASC',
-      },
-    });
+    try {
+      const allTranslation = await this.languageRepository.find({
+        relations: ['translation'],
+        order: {
+          id: 'ASC',
+        },
+      });
 
-    const mapped = allTranslation.map((t) => {
-      return {
-        key: t.translation.keyName,
-        en: t.en,
-        fr: t.fr,
-        zh: t.zh,
-        ar: t.ar,
-        pt: t.pt,
-        es: t.es,
-        ko: t.ko,
-      };
-    });
+      const mapped = allTranslation.map((t) => {
+        return {
+          key: t.translation.keyName,
+          en: t.en,
+          fr: t.fr,
+          zh: t.zh,
+          ar: t.ar,
+          pt: t.pt,
+          es: t.es,
+          ko: t.ko,
+        };
+      });
 
-    return mapped;
+      return mapped;
+    } catch (e) {
+      console.log('error', e);
+      // this.logger.instance().captureMessage(message, Sentry.Severity.Log);
+      this.logger.instance().captureException(e);
+      throw e;
+    }
   }
 
   async updateTranslationLanguage(
@@ -167,6 +204,9 @@ export class TaskService {
       await this.languageRepository.save(langInDb);
       return [true];
     } catch (e) {
+      console.log('error', e);
+      // this.logger.instance().captureMessage(message, Sentry.Severity.Log);
+      this.logger.instance().captureException(e);
       return [false, e.message];
     }
   }
@@ -255,6 +295,8 @@ export class TaskService {
     } catch (e) {
       console.log('error', e);
       await queryRunner.rollbackTransaction();
+      // this.logger.instance().captureMessage(message, Sentry.Severity.Log);
+      this.logger.instance().captureException(e);
       return [false, e.message, null];
     } finally {
       // you need to release a queryRunner which was manually instantiated
@@ -289,6 +331,9 @@ export class TaskService {
 
       return [true];
     } catch (e) {
+      console.log('error', e);
+      // this.logger.instance().captureMessage(message, Sentry.Severity.Log);
+      this.logger.instance().captureException(e);
       return [false, e.message];
     }
   }
@@ -342,6 +387,9 @@ export class TaskService {
 
       return [true];
     } catch (e) {
+      console.log('error', e);
+      // this.logger.instance().captureMessage(message, Sentry.Severity.Log);
+      this.logger.instance().captureException(e);
       return [false, e.message];
     }
   }
@@ -367,6 +415,9 @@ export class TaskService {
 
       return [true];
     } catch (e) {
+      console.log('eee', e);
+      // this.logger.instance().captureMessage(message, Sentry.Severity.Log);
+      this.logger.instance().captureException(e);
       return [false, e.message];
     }
   }
