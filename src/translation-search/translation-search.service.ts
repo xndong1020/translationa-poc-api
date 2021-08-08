@@ -47,23 +47,35 @@ export class TranslationSearchService {
     });
   }
 
-  async search(queryText: string): Promise<TranslationSearchResponse[]> {
-    const { body } = await this.elasticsearchService.search({
-      index: this._index,
-      body: {
-        query: {
+  async search(
+    queryText: string,
+    fuzzy = false,
+  ): Promise<TranslationSearchResponse[]> {
+    const query = fuzzy
+      ? {
           match: {
             description: {
               query: queryText,
               fuzziness: 2,
             },
           },
-        },
+        }
+      : {
+          match: {
+            'keyName.keyword': queryText,
+          },
+        };
+    console.log('query', query);
+    const { body } = await this.elasticsearchService.search({
+      index: this._index,
+      body: {
+        query,
       },
     });
     const {
       hits: { hits, max_score, total },
     } = body;
+    console.log('hits', hits, max_score, total);
     return hits.map((item) => item._source);
   }
 }

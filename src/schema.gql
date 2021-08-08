@@ -142,7 +142,7 @@ type Query {
   getTasks: [Task!]
   getMyTaskLanguage(taskId: Float!): String
   getTranslationLanguage(input: GetTranslationLanguageInput!): [TranslationTaskResponse!]
-  search(queryText: String!): [TranslationSearchResponse!]
+  search(translationSearchInput: TranslationSearchInput!): [TranslationSearchResponse!]
   getUsers: [User!]!
   me: User!
 }
@@ -150,6 +150,11 @@ type Query {
 input GetTranslationLanguageInput {
   taskId: Int!
   myTaskLanguage: String
+}
+
+input TranslationSearchInput {
+  queryText: String!
+  fuzzy: Boolean
 }
 
 type Mutation {
