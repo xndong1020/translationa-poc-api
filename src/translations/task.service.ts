@@ -20,6 +20,7 @@ import { SUPPORTED_LANGUAGES } from 'src/common/constants/constants';
 import { AutoTranslateService } from 'src/auto-translate/auto-translate.service';
 import { KafkaService } from 'src/kafka/kafka.service';
 import { KafkaPayload } from 'src/kafka/kafka.config';
+import { TaskStatus } from 'src/common/enums/TASK_STATUS.enum';
 
 export type QueryResult = [boolean, string?, any?];
 
@@ -187,24 +188,10 @@ export class TaskService {
     try {
       const task = new Task();
       task.name = newTask.taskName;
-      task.isLocked = false;
+      task.status = TaskStatus.Pending;
       task.updatedBy = user.email || '';
 
       const newTaskInDb = await queryRunner.manager.save<Task>(task);
-
-      const payload: KafkaPayload = {
-        messageId: '' + new Date().valueOf(),
-        body: {
-          value: `New translation task ${newTaskInDb.id} has been created`,
-        },
-        messageType: 'Translation.Created',
-        topicName: 'translation.creation.topic',
-      };
-      const value = await this.kafkaService.sendMessage(
-        'translation.creation.topic',
-        payload,
-      );
-      console.log('kafka status ', value);
 
       for await (const translationKey of newTask.translationItems) {
         const translation = new Translation();
@@ -216,12 +203,16 @@ export class TaskService {
         language.en = translationKey.keyValue;
         language.translation = translation;
 
-        const autoTranslations =
-          await this.autoTranslateService.translateTextBulk(
-            translationKey.keyValue,
-          );
+        // const autoTranslations =
+        //   await this.autoTranslateService.translateTextBulk(
+        //     translationKey.keyValue,
+        //   );
+        // for (const lan of SUPPORTED_LANGUAGES) {
+        //   language[lan] = autoTranslations[lan] || '';
+        // }
+
         for (const lan of SUPPORTED_LANGUAGES) {
-          language[lan] = autoTranslations[lan] || '';
+          language[lan] = '';
         }
 
         await queryRunner.manager.save<Language>(language);
@@ -238,6 +229,28 @@ export class TaskService {
         await queryRunner.manager.save<Assignee>(newAssignee);
       }
       await queryRunner.commitTransaction();
+
+      const taskSaved = await this.findTaskById(newTaskInDb.id);
+      const data = taskSaved.translationItems.map((item) => ({
+        id: item.language.id,
+        taskName: newTask.taskName,
+        keyName: item.keyName,
+        description: item.language.en,
+      }));
+
+      const payload: KafkaPayload = {
+        messageId: '' + new Date().valueOf(),
+        body: {
+          value: data,
+        },
+        messageType: 'Translation.Released',
+        topicName: 'translation.creation.topic',
+      };
+      const value = await this.kafkaService.sendMessage(
+        'translation.creation.topic',
+        payload,
+      );
+      console.log('kafka status ', value);
       return [true, null, newTaskInDb];
     } catch (e) {
       console.log('error', e);
@@ -249,45 +262,108 @@ export class TaskService {
     }
   }
 
-  async lockTask(id: number, user: string): Promise<QueryResult> {
-    try {
-      const task = await this.taskRepository
-        .createQueryBuilder('t')
-        .leftJoinAndSelect('t.translationItems', 'tt')
-        .leftJoinAndSelect('tt.language', 'ttl')
-        .where('t.id = :taskId', {
-          taskId: id,
-        })
-        .orderBy('t.id')
-        .getOne();
+  async findTaskById(id: number): Promise<Task> {
+    return await this.taskRepository
+      .createQueryBuilder('t')
+      .leftJoinAndSelect('t.translationItems', 'tt')
+      .leftJoinAndSelect('tt.language', 'ttl')
+      .where('t.id = :taskId', {
+        taskId: id,
+      })
+      .orderBy('t.id')
+      .getOne();
+  }
 
-      const data: ITranslateProps[] = task.translationItems.map((item) => {
-        return {
-          keyName: item.keyName,
-          description: item.language.en,
-          translation: {
-            en: item.language.en,
-            fr: item.language.fr,
-            zh: item.language.zh,
-            es: item.language.es,
-            pt: item.language.pt,
-            ko: item.language.ko,
-            ar: item.language.ar,
-          },
-        };
+  async proofreadTask(id: number, user: User): Promise<QueryResult> {
+    try {
+      const taskInDb = await this.taskRepository.findOneOrFail({
+        id,
       });
 
-      const { statusCode } =
-        await this.translationSearchService.indexRecordsBulk(data);
+      if (taskInDb.status === TaskStatus.Locked)
+        throw new Error('Task is currently locked.');
 
-      if (statusCode === 200) {
-        const taskInDb = await this.taskRepository.findOneOrFail({
-          id,
+      taskInDb.status = TaskStatus.Proofreaded;
+      taskInDb.updatedBy = user.email || 'Translator';
+      await this.taskRepository.save(taskInDb);
+
+      return [true];
+    } catch (e) {
+      return [false, e.message];
+    }
+  }
+
+  async releaseTask(id: number, user: User): Promise<QueryResult> {
+    try {
+      const taskInDb = await this.taskRepository.findOneOrFail({
+        id,
+      });
+
+      // if (taskInDb.status !== TaskStatus.Proofreaded)
+      //   throw new Error('Task has to been proofreaded by translator first.');
+
+      taskInDb.status = TaskStatus.Released;
+      taskInDb.updatedBy = user.email || 'Admin';
+      await this.taskRepository.save(taskInDb);
+
+      const currentTaskWithTranslation = await this.findTaskById(id);
+
+      const data: ITranslateProps[] =
+        currentTaskWithTranslation.translationItems.map((item) => {
+          return {
+            projectName: currentTaskWithTranslation.name,
+            keyName: item.keyName,
+            description: item.language.en,
+            translation: {
+              en: item.language.en,
+              fr: item.language.fr,
+              zh: item.language.zh,
+              es: item.language.es,
+              pt: item.language.pt,
+              ko: item.language.ko,
+              ar: item.language.ar,
+            },
+          };
         });
-        taskInDb.isLocked = true;
-        taskInDb.updatedBy = user || 'user';
-        await this.taskRepository.save(taskInDb);
+
+      const payload: KafkaPayload = {
+        messageId: '' + new Date().valueOf(),
+        body: {
+          value: data,
+        },
+        messageType: 'Translation.Released',
+        topicName: 'translation.upsert.topic',
+      };
+      const value = await this.kafkaService.sendMessage(
+        'translation.upsert.topic',
+        payload,
+      );
+      console.log('kafka status ', value);
+
+      return [true];
+    } catch (e) {
+      return [false, e.message];
+    }
+  }
+
+  async toggleLockTask(id: number, user: User): Promise<QueryResult> {
+    try {
+      const taskInDb = await this.taskRepository.findOneOrFail({
+        id,
+      });
+
+      if ([TaskStatus.Released].includes(taskInDb.status)) {
+        throw new Error(
+          'This task cannot be locked because it has been released',
+        );
       }
+
+      taskInDb.status =
+        taskInDb.status === TaskStatus.Locked
+          ? TaskStatus.Pending
+          : TaskStatus.Locked;
+      taskInDb.updatedBy = user.email || 'Admin';
+      await this.taskRepository.save(taskInDb);
 
       return [true];
     } catch (e) {

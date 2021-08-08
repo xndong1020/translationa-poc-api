@@ -44,13 +44,20 @@ type Task {
   updatedAt: DateTime
   name: String!
   savedOn: DateTime!
-  isLocked: Boolean!
+  status: TaskStatus!
   updatedBy: String
   translationItems: [Translation!]!
   assignees: [Assignee!]!
   hasCompleted: Boolean
   totalKeysCount: Int
   pendingKeysCount: Int
+}
+
+enum TaskStatus {
+  Pending
+  Locked
+  Proofreaded
+  Released
 }
 
 type Assignee {
@@ -91,7 +98,7 @@ type UpdateTranslationLanguageResponse {
   ok: Boolean!
 }
 
-type LockTaskResponse {
+type ActionTaskResponse {
   error: String
   ok: Boolean!
 }
@@ -149,7 +156,7 @@ type Mutation {
   createTask(createTaskDto: CreateTaskInput!): Int
   createNewTask(createNewTaskDto: CreateNewTaskInput!): CreateNewTaskResponse!
   updateTranslationLanguage(updateTranslationLanguageInput: UpdateTranslationLanguageInput!): UpdateTranslationLanguageResponse!
-  lockTask(taskId: Float!): LockTaskResponse!
+  actionOnTask(actionTaskInput: ActionTaskInput!): ActionTaskResponse!
   createUser(newUser: CreateUserDto!): CreateUserResponse!
   loginUser(loginUser: LoginUserDto!): LoginUserResponse!
 }
@@ -184,6 +191,18 @@ input UpdateTranslationLanguageInput {
   ar: String
   ko: String
   hasComplete: Boolean
+}
+
+input ActionTaskInput {
+  taskId: Float!
+  action: TaskActions!
+}
+
+enum TaskActions {
+  Create
+  ToggleLock
+  Proofread
+  Release
 }
 
 input CreateUserDto {

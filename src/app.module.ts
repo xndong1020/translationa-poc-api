@@ -76,9 +76,9 @@ import { KafkaModule } from './kafka/kafka.module';
       secretKey: process.env.SECRET_KEY,
     }),
     KafkaModule.register({
-      clientId: 'test-app-client',
+      clientId: 'translation-api-client',
       brokers: ['localhost:9092'],
-      groupId: 'test-app-group',
+      groupId: 'translation-api-group',
     }),
     TranslationsModule,
     CommonModule,

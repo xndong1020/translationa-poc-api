@@ -1,4 +1,5 @@
 create type users_role_enum as enum('owner', 'admin', 'translator');
+create type task_status_enum as enum('pending', 'locked', 'proofreaded', 'released');
 
 CREATE TABLE public.users (
 	id serial NOT NULL,
@@ -26,7 +27,7 @@ CREATE TABLE public.tasks (
 	"updatedAt" timestamp NOT NULL DEFAULT now(),
 	"name" varchar NOT NULL,
 	saved_on timestamp NULL DEFAULT now(),
-	is_locked bool NOT NULL,
+	status task_status_enum NOT NULL,
 	updated_by varchar,
 	CONSTRAINT "PK_tbl_tasks" PRIMARY KEY (id)
 );

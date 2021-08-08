@@ -26,7 +26,9 @@ import { GetTranslationLanguageInput } from './dtos/GetTranslationLanguageInput.
 import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { PUB_SUB } from 'src/pub-sub/pub-sub.module';
 import { SERVER_EVENT } from 'src/common/constants/constants';
-import { LockTaskResponse } from './dtos/LockTaskResponse';
+import { ActionTaskResponse } from './dtos/ActionTaskResponse';
+import { ActionTaskInput } from './dtos/ActionTaskInput.dto';
+import { TaskActions } from 'src/common/enums/TASK_ACTIONS.enum';
 
 @Resolver()
 export class TasksResolver {
@@ -107,20 +109,78 @@ export class TasksResolver {
     return { ok, error };
   }
 
-  @Mutation(() => LockTaskResponse)
-  async lockTask(
-    @Args('taskId') taskId: number,
+  @Mutation(() => ActionTaskResponse)
+  async actionOnTask(
+    @Args('actionTaskInput') actionTaskInput: ActionTaskInput,
     @Context() context: any,
-  ): Promise<LockTaskResponse> {
+  ): Promise<ActionTaskResponse> {
     const user: User = context.user;
-    if (user.role !== UserRole.Translator) {
-      const [ok, error] = await this.taskService.lockTask(taskId, user.email);
+
+    if (actionTaskInput.action === TaskActions.ToggleLock) {
+      if (user.role === UserRole.Translator)
+        return {
+          ok: false,
+          error: `You don't have permission to lock task`,
+        };
+
+      const [ok, error] = await this.taskService.toggleLockTask(
+        actionTaskInput.taskId,
+        user,
+      );
 
       if (ok) {
         this.pubSub.publish(SERVER_EVENT, {
           messageFeed: {
-            functionName: 'lockTask',
-            payload: JSON.stringify({ taskId }),
+            functionName: `${TaskActions.ToggleLock}Task`,
+            payload: JSON.stringify({ taskId: actionTaskInput.taskId }),
+          },
+        });
+      }
+
+      return { ok, error };
+    }
+
+    if (actionTaskInput.action === TaskActions.Proofread) {
+      if (user.role !== UserRole.Translator)
+        return {
+          ok: false,
+          error: `You don't have permission to proofread task`,
+        };
+
+      const [ok, error] = await this.taskService.proofreadTask(
+        actionTaskInput.taskId,
+        user,
+      );
+
+      if (ok) {
+        this.pubSub.publish(SERVER_EVENT, {
+          messageFeed: {
+            functionName: `${TaskActions.Proofread}Task`,
+            payload: JSON.stringify({ taskId: actionTaskInput.taskId }),
+          },
+        });
+      }
+
+      return { ok, error };
+    }
+
+    if (actionTaskInput.action === TaskActions.Release) {
+      if (user.role === UserRole.Translator)
+        return {
+          ok: false,
+          error: `You don't have permission to release task`,
+        };
+
+      const [ok, error] = await this.taskService.releaseTask(
+        actionTaskInput.taskId,
+        user,
+      );
+
+      if (ok) {
+        this.pubSub.publish(SERVER_EVENT, {
+          messageFeed: {
+            functionName: `${TaskActions.Release}Task`,
+            payload: JSON.stringify({ taskId: actionTaskInput.taskId }),
           },
         });
       }

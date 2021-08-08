@@ -1,5 +1,6 @@
 import { Field, InputType, Int, ObjectType } from '@nestjs/graphql';
 import { CoreEntity } from 'src/common/entities/core.entity';
+import { TaskStatus } from 'src/common/enums/TASK_STATUS.enum';
 import {
   AfterLoad,
   Column,
@@ -22,9 +23,9 @@ export class Task extends CoreEntity {
   @Field()
   savedOn: Date;
 
-  @Column({ name: 'is_locked' })
-  @Field((type) => Boolean)
-  isLocked: boolean;
+  @Column()
+  @Field((type) => TaskStatus)
+  status: TaskStatus;
 
   @Column({ name: 'updated_by', nullable: true })
   @Field({ nullable: true })
