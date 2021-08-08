@@ -33,21 +33,21 @@ TOKEN=$(
 # echo "$TOKEN"
 
 # check if $TOKEN is 'null'
-[ $TOKEN = 'null' ] && exit 1 
+[ $TOKEN = 'null' ] && exit 1
 
 # check if $TOKEN is unset
-if [ -z ${TOKEN+x} ]; 
-  then 
-    echo "TOKEN is unset"; 
-    exit 1; 
-  else 
-    echo "TOKEN is set to '$TOKEN'";  
+if [ -z ${TOKEN+x} ];
+  then
+    echo "TOKEN is unset";
+    exit 1;
+  else
+    echo "TOKEN is set to '$TOKEN'";
 fi
- 
+
 curl \
 -X POST \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer $TOKEN" \
 --data '{ "query": "{ getAllTranslations {  key    en    fr    zh    es    pt    ar    ko } } " }' \
-http://localhost:3001/graphql | tac | jq -r '.data.getAllTranslations' | ./node_modules/.bin/json2yaml  >> translations.yaml
+http://localhost:3001/graphql | tac | jq -r '.data.getAllTranslations' | ./node_modules/.bin/json2yaml  > translations.yaml
 
