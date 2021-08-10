@@ -1,0 +1,4 @@
+INSERT INTO posts VALUES (1, '2019-01-19 17:00:00', '2019-01-19 17:00:00', 'Description 1');
+INSERT INTO posts VALUES (2, '2019-01-19 17:00:00', '2019-01-19 17:00:00', 'Description 2');
+INSERT INTO posts VALUES (3, '2019-01-19 17:00:00', '2019-01-19 17:00:00', 'Description 3');
+INSERT INTO posts VALUES (4, '2019-01-19 17:00:00', '2019-01-19 17:00:00', 'Description 4');

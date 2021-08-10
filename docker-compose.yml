@@ -22,6 +22,16 @@ services:
       - ./dbdata:/var/lib/postgresql/data
     networks:
       - app-network
+  flyway_postgres:
+    image: arojunior/flyway:5.2.4
+    command: 'wait-for-it --timeout=60 --strict db:5432 -- flyway migrate'
+    volumes:
+      - ./flyway/postgres/migrations/config:/flyway/conf
+      - ./flyway/postgres/migrations/sql:/flyway/sql
+    depends_on:
+      - db
+    networks:
+      - app-network
   es01:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.14.0
     container_name: es01
