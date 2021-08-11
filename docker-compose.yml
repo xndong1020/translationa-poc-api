@@ -32,6 +32,7 @@ services:
       - FLYWAY_INIT_SQL=CREATE SCHEMA IF NOT EXISTS flyway;
       - FLYWAY_SCHEMAS=flyway,public
       - FLYWAY_BASELINE_ON_MIGRATE=true
+      - FLYWAY_EDITION=community
     command: -locations=filesystem:/flyway/sql -connectRetries=60 migrate
     volumes:
       - ./flyway/postgres/migrations/sql:/flyway/sql
